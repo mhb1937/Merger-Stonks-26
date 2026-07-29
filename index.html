@@ -104,6 +104,7 @@
   <div class="controls">
     <button class="btn" id="toggleAll">Show all</button>
     <button class="btn" id="toggleTop">Top 5 only</button>
+    <button class="btn" id="toggleHours">Show off-hours</button>
     <button class="btn" id="refreshBtn">Refresh now</button>
   </div>
 
@@ -196,6 +197,28 @@ function sampleData(){
 /* ---- build / update chart ---- */
 function labelsFrom(rows){ const key=Object.keys(rows[0])[0]; return rows.map(r=>fmtTime(r[key])); }
 
+// Collapse runs of identical readings (frozen off-hours) into a single point so the
+// chart only spends width where prices actually moved. Timezone-independent.
+function collapseFlat(rows){
+  if(rows.length<=2) return rows;
+  const names=ROSTER.map(r=>r.name);
+  const out=[rows[0]];
+  for(let i=1;i<rows.length;i++){
+    const prev=out[out.length-1];
+    let changed=false;
+    for(const n of names){
+      const v=rows[i][n];
+      if(v!=='' && v!==undefined && v!==prev[n]){ changed=true; break; }
+    }
+    if(changed || i===rows.length-1) out.push(rows[i]);
+  }
+  return out;
+}
+
+let showOffHours=false, onlyTop=false;
+function currentRows(){ return showOffHours ? lastRows : collapseFlat(lastRows); }
+function draw(){ renderChart(currentRows(), onlyTop); }
+
 function datasetsFrom(rows,onlyTop){
   let names=ROSTER.map(r=>r.name);
   if(onlyTop){
@@ -286,12 +309,17 @@ async function load(){
     const key=Object.keys(rows[0])[0];
     document.getElementById('updated').textContent='updated '+fmtTime(rows[rows.length-1][key])+' ET';
   }
-  renderChart(rows,false);
   renderStandings(rows);
+  draw();
 }
 
-document.getElementById('toggleAll').onclick=()=>renderChart(lastRows,false);
-document.getElementById('toggleTop').onclick=()=>renderChart(lastRows,true);
+document.getElementById('toggleAll').onclick=()=>{ onlyTop=false; draw(); };
+document.getElementById('toggleTop').onclick=()=>{ onlyTop=true; draw(); };
+document.getElementById('toggleHours').onclick=(e)=>{
+  showOffHours=!showOffHours;
+  e.target.textContent = showOffHours ? 'Hide off-hours' : 'Show off-hours';
+  draw();
+};
 document.getElementById('refreshBtn').onclick=load;
 
 load();

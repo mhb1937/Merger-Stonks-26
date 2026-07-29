@@ -165,9 +165,19 @@ function parseCSV(text){
 }
 
 function fmtTime(ts){
+  // Sheet stamps ET wall-clock like "7/29/2026 12:29:00" — show those exact digits so
+  // every viewer sees Eastern regardless of their own timezone.
+  const m = ts && ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if(m){
+    const d=new Date(+m[3],+m[1]-1,+m[2],+m[4],+m[5]);
+    const wd=d.toLocaleDateString('en-US',{weekday:'short'});
+    let h=+m[4]; const ap=h>=12?'PM':'AM'; h=h%12||12;
+    return `${wd} ${h}:${m[5]} ${ap}`;
+  }
+  // fallback (e.g. ISO sample data): render in Eastern
   const d=new Date(ts);
   if(isNaN(d)) return ts;
-  return d.toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit'});
+  return d.toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit',timeZone:'America/New_York'});
 }
 
 /* ---- sample data so the UI shows before you wire the CSV ---- */
@@ -192,11 +202,12 @@ function datasetsFrom(rows,onlyTop){
     const last=rows[rows.length-1];
     names=[...ROSTER].sort((a,b)=>parseFloat(last[b.name])-parseFloat(last[a.name])).slice(0,5).map(r=>r.name);
   }
+  const pr = rows.length <= 2 ? 4 : 0;   // show dots when there's too little history to draw a line
   return ROSTER.filter(r=>names.includes(r.name)).map(r=>({
     label:`${r.name} (${r.ticker==='Bitcoin'?'BTC':r.ticker})`,
     data:rows.map(row=>parseFloat(row[r.name])),
     borderColor:r.color, backgroundColor:r.color,
-    borderWidth:2, pointRadius:0, pointHoverRadius:4, tension:.25,
+    borderWidth:2, pointRadius:pr, pointHoverRadius:5, tension:.25, spanGaps:true,
   }));
 }
 
@@ -213,7 +224,7 @@ function renderChart(rows,onlyTop){
         tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y>0?'+':''}${c.parsed.y.toFixed(2)}%`}}
       },
       scales:{
-        x:{ticks:{color:'#6b7680',font:{family:'IBM Plex Mono',size:9},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.05)'}},
+        x:{ticks:{color:'#6b7680',font:{family:'IBM Plex Mono',size:9},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.05)'},title:{display:true,text:'time (ET)',color:'#6b7680',font:{family:'IBM Plex Mono',size:10}}},
         y:{ticks:{color:'#6b7680',font:{family:'IBM Plex Mono',size:10},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.05)'},title:{display:true,text:'% change from open',color:'#6b7680',font:{family:'IBM Plex Mono',size:10}}}
       }
     }
@@ -273,7 +284,7 @@ async function load(){
     status.className='status';
     document.getElementById('statusText').textContent='LIVE';
     const key=Object.keys(rows[0])[0];
-    document.getElementById('updated').textContent='updated '+fmtTime(rows[rows.length-1][key]);
+    document.getElementById('updated').textContent='updated '+fmtTime(rows[rows.length-1][key])+' ET';
   }
   renderChart(rows,false);
   renderStandings(rows);

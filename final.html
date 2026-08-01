@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Ascent — Final Cut</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0b0e11; --panel:#12171c; --panel-2:#0e1216;
+    --amber:#ffb000; --amber-dim:#8a6a1f; --up:#21c17a; --down:#ff4d5e;
+    --bright:#e8edf1; --dim:#6b7680; --grid:rgba(255,255,255,0.06); --glow:0 0 12px rgba(255,176,0,0.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--bright);font-family:"IBM Plex Mono",monospace;min-height:100vh;-webkit-font-smoothing:antialiased;
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:44px 44px;}
+  .tape{border-bottom:1px solid var(--grid);background:var(--panel-2);overflow:hidden;white-space:nowrap;height:32px;display:flex;align-items:center;}
+  .tape-track{display:inline-block;padding-left:100%;animation:scroll 30s linear infinite;}
+  .tape-track span{font-size:12px;letter-spacing:.08em;color:var(--dim);margin:0 20px;}
+  .tape-track span b{color:var(--amber);font-weight:600;}
+  @keyframes scroll{from{transform:translateX(0);}to{transform:translateX(-100%);}}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 18px 60px;}
+  header.masthead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid var(--amber);padding-bottom:12px;}
+  .brand h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(26px,6vw,44px);line-height:.92;margin:0;color:var(--amber);text-shadow:var(--glow);}
+  .brand p{margin:6px 0 0;font-size:12px;color:var(--dim);letter-spacing:.04em;}
+  .status{text-align:right;font-size:11px;color:var(--dim);line-height:1.7;white-space:nowrap;}
+  .status .clock{font-family:"Space Grotesk";font-weight:700;font-size:16px;color:var(--bright);}
+  .status .leader{color:var(--amber);}
+  .winbar{margin:14px 0 0;padding:11px 14px;border:1px solid var(--amber);border-radius:4px;background:rgba(255,176,0,.1);color:var(--amber);font-family:"Space Grotesk";font-weight:700;font-size:16px;display:none;text-align:center;}
+  .winbar.show{display:block;}
+
+  .top{display:grid;grid-template-columns:1fr 200px;gap:14px;margin:18px 0 0;}
+  .left{min-width:0;}
+  .arena{display:grid;grid-template-columns:38px 1fr;}
+  .yaxis{position:relative;}
+  .ytick{position:absolute;right:6px;transform:translateY(50%);font-size:10px;color:var(--dim);}
+  .sky{position:relative;height:452px;border:1px solid var(--grid);border-radius:6px;overflow:hidden;
+       background:linear-gradient(180deg,#0e1622 0%,#0d131b 55%,#0b0f14 100%);}
+  #trails{position:absolute;inset:0;z-index:1;pointer-events:none;}
+  .daymark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;pointer-events:none;
+           font-family:"Space Grotesk";font-weight:700;font-size:clamp(38px,8vw,72px);letter-spacing:.12em;color:rgba(255,255,255,0.06);opacity:0;}
+  .daymark.show{animation:dayfade 1.9s ease-out;}
+  @keyframes dayfade{0%{opacity:0;}18%{opacity:1;}75%{opacity:.5;}100%{opacity:0;}}
+  .gridline{position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,0.05);}
+  .gridline.zero{background:rgba(255,255,255,0.22);}
+  .gridline.zero:after{content:'open · 0%';position:absolute;left:8px;top:-13px;font-size:9px;letter-spacing:.1em;color:var(--dim);}
+  .summit{position:absolute;left:0;right:0;height:0;border-top:1px dashed var(--amber);opacity:.55;}
+  .summit:after{content:'summit';position:absolute;right:8px;top:-13px;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber-dim);}
+
+  .balloon{position:absolute;transform:translateX(-50%);transition:bottom .5s linear;width:26px;text-align:center;z-index:2;}
+  .balloon .bulb{position:relative;width:26px;height:30px;margin:0 auto;border-radius:50% 50% 48% 48% / 58% 58% 42% 42%;box-shadow:inset -4px -3px 7px rgba(0,0,0,.3), 0 0 7px rgba(0,0,0,.35);}
+  .balloon .rk{position:absolute;top:7px;left:0;right:0;font-family:"Space Grotesk";font-weight:700;font-size:11px;color:rgba(0,0,0,.6);}
+  .balloon .string{width:1px;height:7px;background:rgba(255,255,255,.28);margin:0 auto;}
+  .balloon .basket{width:8px;height:6px;background:#6f4a26;border-radius:1px;margin:0 auto;}
+  .balloon .crown{position:absolute;top:-16px;left:0;right:0;font-size:13px;display:none;}
+  .balloon.win .crown{display:block;}
+  .balloon.win .bulb, .balloon.lead .bulb{box-shadow:inset -4px -3px 7px rgba(0,0,0,.3), 0 0 15px var(--amber);}
+  .balloon.flash{animation:flashpulse .55s ease-out;z-index:4;}
+  @keyframes flashpulse{0%{transform:translateX(-50%) scale(1);}28%{transform:translateX(-50%) scale(1.4);}100%{transform:translateX(-50%) scale(1);}}
+  body.running .balloon .bulb{animation:bob .5s ease-in-out infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-2.5px);}}
+
+  .xlabels{display:grid;margin:6px 0 0 38px;}
+  .xlabels .xl{text-align:center;font-size:9px;color:var(--dim);overflow:hidden;white-space:nowrap;}
+  .xlabels .xl b{display:block;font-family:"Space Grotesk";font-weight:700;color:var(--bright);font-size:10px;}
+  .progress{height:4px;background:var(--grid);border-radius:2px;margin:9px 0 0 38px;overflow:hidden;}
+  .progress #prog{height:100%;background:var(--amber);width:0;transition:width .5s linear;box-shadow:var(--glow);}
+
+  .board{border:1px solid var(--grid);border-radius:6px;background:var(--panel-2);align-self:start;padding:4px 0 6px;}
+  .board .bhead{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);padding:8px 12px 6px;border-bottom:1px solid var(--grid);}
+  .brow{display:grid;grid-template-columns:16px 11px 1fr auto 22px;align-items:center;gap:7px;padding:5px 11px;font-size:12px;transition:background .2s;}
+  .brow .bp{font-family:"Space Grotesk";font-weight:700;color:var(--amber);font-size:11px;}
+  .brow .sw{width:10px;height:10px;border-radius:2px;}
+  .brow .bn{font-family:"Space Grotesk";font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .brow .bn small{color:var(--dim);font-family:"IBM Plex Mono";font-weight:500;font-size:9px;margin-left:3px;}
+  .brow .bv{font-weight:600;text-align:right;font-size:11px;}
+  .brow .bv.up{color:var(--up);} .brow .bv.down{color:var(--down);}
+  .brow .up{color:var(--up);font-size:10px;} .brow .down{color:var(--down);font-size:10px;}
+
+  .controls{display:flex;gap:10px;align-items:center;margin:16px 0 0;flex-wrap:wrap;}
+  .btn{font-family:inherit;font-size:12px;letter-spacing:.08em;text-transform:uppercase;background:var(--amber);color:#12100a;border:none;padding:11px 20px;border-radius:3px;cursor:pointer;font-weight:700;box-shadow:var(--glow);}
+  .btn:hover{transform:translateY(-1px);}
+  .btn.ghost{background:transparent;color:var(--dim);border:1px solid var(--grid);box-shadow:none;font-weight:500;}
+  .btn.ghost:hover{color:var(--bright);border-color:var(--amber);transform:none;}
+  .btn.ghost.on{color:var(--amber);border-color:var(--amber);}
+  .scrub{flex:1;min-width:160px;}
+  input[type=range]{width:100%;accent-color:var(--amber);}
+
+  footer{margin-top:22px;text-align:center;font-size:11px;color:var(--dim);line-height:1.8;}
+  footer b{color:var(--amber-dim);}
+  @media (max-width:720px){
+    .top{grid-template-columns:1fr;}
+    .board{order:2;}
+    .sky{height:360px;}
+    .balloon{width:20px;} .balloon .bulb{width:20px;height:24px;}
+    .xlabels .xl{font-size:8px;} .xlabels .xl b{font-size:9px;}
+    .status{display:none;}
+  }
+  @media (prefers-reduced-motion:reduce){.tape-track{animation:none;padding-left:0;}body.running .balloon .bulb{animation:none;}.daymark.show{animation:none;}}
+</style>
+</head>
+<body>
+<div class="tape" aria-hidden="true"><div class="tape-track" id="tape"></div></div>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="brand"><h1>THE ASCENT</h1><p id="windowLabel">draft order, by altitude</p></div>
+    <div class="status"><div class="clock" id="clock">—</div><div class="leader" id="leader">on the pad</div></div>
+  </header>
+
+  <div class="winbar" id="winbar"></div>
+
+  <div class="top">
+    <div class="left">
+      <div class="arena"><div class="yaxis" id="yaxis"></div><div class="sky" id="sky"></div></div>
+      <div class="xlabels" id="xlabels"></div>
+      <div class="progress"><div id="prog"></div></div>
+    </div>
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="playBtn">▶ Play</button>
+    <button class="btn ghost" id="replayBtn">↺ Replay</button>
+    <button class="btn ghost" id="spd1">1×</button>
+    <button class="btn ghost" id="spd2">2×</button>
+    <button class="btn ghost" id="spd4">4×</button>
+    <div class="scrub"><input type="range" id="scrub" min="0" max="0" value="0" /></div>
+  </div>
+
+  <footer>
+    Altitude = percent change from Tuesday's open · trails show the recent path · list tracks live order.<br>
+    <b>Highest balloon at Friday's close takes pick 1.</b>
+  </footer>
+</div>
+
+<script>
+const WINDOW_LABEL = "Merger Stonks \u201926  \u00b7  Tue 7/28 \u2192 Fri 7/31  \u00b7  final cut";
+
+const RACE = [{"label":"Tue 9:30 AM ET \u00b7 open","pos":{"Christian":0,"Dan":0,"Joey":0,"Ray":0,"Bobby":0,"Matt":0,"Eric":0,"Kat":0,"Ciaran":0,"Luke":0,"Mike":0,"Brendan":0}},{"label":"Tue 1:00 PM ET","pos":{"Christian":1.949,"Dan":3.3797,"Joey":0.5557,"Ray":5.7629,"Bobby":1.1442,"Matt":1.2573,"Eric":0.1283,"Kat":1.7057,"Ciaran":-0.9617,"Luke":-2.1739,"Mike":1.1983,"Brendan":2.5547}},{"label":"Tue 4:00 PM ET \u00b7 close","pos":{"Christian":2.8306,"Dan":6.163,"Joey":0.4969,"Ray":6.4855,"Bobby":0.1295,"Matt":0.9779,"Eric":-0.4519,"Kat":0.3883,"Ciaran":-1.8201,"Luke":-2.1739,"Mike":1.7355,"Brendan":3.6496}},{"label":"Wed 9:59 AM ET","pos":{"Christian":1.9954,"Dan":5.7654,"Joey":-0.4021,"Ray":2.9546,"Bobby":-1.8459,"Matt":1.7603,"Eric":2.6053,"Kat":0.1525,"Ciaran":-2.0823,"Luke":-0.3623,"Mike":1.8595,"Brendan":4.3796}},{"label":"Wed 10:29 AM ET","pos":{"Christian":1.2529,"Dan":6.163,"Joey":-0.7322,"Ray":3.6773,"Bobby":-2.7526,"Matt":1.5647,"Eric":1.0934,"Kat":-0.2358,"Ciaran":-1.6849,"Luke":-2.1739,"Mike":-0.2479,"Brendan":2.5547}},{"label":"Wed 10:59 AM ET","pos":{"Christian":1.2993,"Dan":4.175,"Joey":-0.863,"Ray":3.0918,"Bobby":-3.0117,"Matt":1.5367,"Eric":0.7699,"Kat":-0.1941,"Ciaran":-1.2319,"Luke":-3.9855,"Mike":0.2893,"Brendan":1.0949}},{"label":"Wed 11:29 AM ET","pos":{"Christian":1.2529,"Dan":5.3678,"Joey":-0.9839,"Ray":2.8449,"Bobby":-2.7202,"Matt":1.3691,"Eric":1.5565,"Kat":0.3467,"Ciaran":-0.8504,"Luke":-2.1739,"Mike":0.2479,"Brendan":1.0949}},{"label":"Wed 11:59 AM ET","pos":{"Christian":1.7169,"Dan":6.163,"Joey":-1.5429,"Ray":1.8569,"Bobby":-3.7457,"Matt":0.9779,"Eric":0.8033,"Kat":0.6934,"Ciaran":-0.8107,"Luke":-2.1739,"Mike":0.3719,"Brendan":1.4599}},{"label":"Wed 12:29 PM ET","pos":{"Christian":1.4385,"Dan":5.3678,"Joey":-1.7946,"Ray":2.1588,"Bobby":-3.9292,"Matt":1.0617,"Eric":0.7141,"Kat":0.8321,"Ciaran":-1.2081,"Luke":-3.9855,"Mike":0.8678,"Brendan":1.8248}},{"label":"Wed 12:59 PM ET","pos":{"Christian":1.6241,"Dan":7.7535,"Joey":-1.3794,"Ray":4.9579,"Bobby":-3.573,"Matt":0.6426,"Eric":0.8703,"Kat":0.9014,"Ciaran":-0.9855,"Luke":-3.9855,"Mike":1.2397,"Brendan":1.8248}},{"label":"Wed 1:29 PM ET","pos":{"Christian":1.5313,"Dan":7.3559,"Joey":-0.7257,"Ray":6.5313,"Bobby":-2.5799,"Matt":0.95,"Eric":1.1046,"Kat":1.2065,"Ciaran":-0.5722,"Luke":-3.9855,"Mike":1.3223,"Brendan":2.5547}},{"label":"Wed 1:59 PM ET","pos":{"Christian":1.3921,"Dan":8.5487,"Joey":-0.9676,"Ray":6.3666,"Bobby":-2.3532,"Matt":1.4809,"Eric":0.5021,"Kat":1.6503,"Ciaran":-0.4769,"Luke":-3.9855,"Mike":1.4463,"Brendan":1.8248}},{"label":"Wed 2:29 PM ET","pos":{"Christian":1.5777,"Dan":8.9463,"Joey":-0.6505,"Ray":5.1683,"Bobby":-1.7811,"Matt":1.6764,"Eric":2.7169,"Kat":1.886,"Ciaran":0.2861,"Luke":-3.9855,"Mike":1.4463,"Brendan":2.5547}},{"label":"Wed 2:59 PM ET","pos":{"Christian":1.8561,"Dan":9.3439,"Joey":-0.0621,"Ray":5.1866,"Bobby":-0.5181,"Matt":1.9838,"Eric":2.2427,"Kat":2.0247,"Ciaran":0.7868,"Luke":-2.1739,"Mike":1.6116,"Brendan":3.6496}},{"label":"Wed 3:29 PM ET","pos":{"Christian":1.8097,"Dan":8.5487,"Joey":-0.7812,"Ray":4.3816,"Bobby":-1.3493,"Matt":1.5647,"Eric":1.4951,"Kat":1.7057,"Ciaran":-0.5166,"Luke":-2.1739,"Mike":1.3223,"Brendan":3.2847}},{"label":"Wed 3:59 PM ET","pos":{"Christian":1.2529,"Dan":6.9583,"Joey":-2.6902,"Ray":2.0582,"Bobby":-3.0872,"Matt":0.6426,"Eric":-0.463,"Kat":1.886,"Ciaran":-1.9711,"Luke":-3.9855,"Mike":1.2397,"Brendan":2.1898}},{"label":"Wed 4:00 PM ET \u00b7 close","pos":{"Christian":1.3457,"Dan":9.3439,"Joey":-2.4843,"Ray":2.9546,"Bobby":-3.0225,"Matt":0.5868,"Eric":-0.7029,"Kat":2.1079,"Ciaran":-2.2413,"Luke":-3.9855,"Mike":1.4463,"Brendan":1.8248}},{"label":"Thu 9:59 AM ET","pos":{"Christian":1.1601,"Dan":4.9702,"Joey":0.1471,"Ray":7.7022,"Bobby":-4.3934,"Matt":2.822,"Eric":-0.0837,"Kat":-1.8167,"Ciaran":-2.6625,"Luke":-2.1739,"Mike":-1.7355,"Brendan":2.1898}},{"label":"Thu 10:29 AM ET","pos":{"Christian":0.7889,"Dan":7.7535,"Joey":0.1046,"Ray":6.9521,"Bobby":-5.5376,"Matt":2.2073,"Eric":-1.4672,"Kat":-1.4006,"Ciaran":-3.5765,"Luke":-2.1739,"Mike":-2.8512,"Brendan":2.1898}},{"label":"Thu 10:59 AM ET","pos":{"Christian":0.6497,"Dan":6.163,"Joey":0.0098,"Ray":5.9184,"Bobby":-4.9655,"Matt":2.4588,"Eric":-0.3068,"Kat":-1.4006,"Ciaran":-3.5447,"Luke":-2.1739,"Mike":-2.7273,"Brendan":1.0949}},{"label":"Thu 11:29 AM ET","pos":{"Christian":0.5104,"Dan":6.163,"Joey":-0.2419,"Ray":4.7201,"Bobby":-5.883,"Matt":2.4029,"Eric":-1.0656,"Kat":-1.3452,"Ciaran":-4.2362,"Luke":-2.1739,"Mike":-3.2645,"Brendan":-1.4599}},{"label":"Thu 11:59 AM ET","pos":{"Christian":1.1601,"Dan":8.1511,"Joey":0.0752,"Ray":5.1592,"Bobby":-6.1205,"Matt":2.4588,"Eric":-0.6527,"Kat":-0.4299,"Ciaran":-3.1076,"Luke":-0.3623,"Mike":-2.8099,"Brendan":0.365}},{"label":"Thu 12:29 PM ET","pos":{"Christian":0.9745,"Dan":8.9463,"Joey":0.3661,"Ray":4.1438,"Bobby":-5.5915,"Matt":2.6544,"Eric":-0.53,"Kat":0.0555,"Ciaran":-3.2745,"Luke":1.4493,"Mike":-2.8512,"Brendan":-0.365}},{"label":"Thu 12:59 PM ET","pos":{"Christian":1.2993,"Dan":9.7416,"Joey":-0.049,"Ray":2.7534,"Bobby":-5.9909,"Matt":2.5426,"Eric":0.675,"Kat":1.1233,"Ciaran":-3.195,"Luke":-0.3623,"Mike":-3.2645,"Brendan":0.7299}},{"label":"Thu 1:29 PM ET","pos":{"Christian":1.2065,"Dan":8.5487,"Joey":0.1961,"Ray":3.1925,"Bobby":-5.4836,"Matt":2.6544,"Eric":0.7252,"Kat":1.151,"Ciaran":-2.8294,"Luke":1.4493,"Mike":-3.0992,"Brendan":0.365}},{"label":"Thu 1:59 PM ET","pos":{"Christian":1.1601,"Dan":8.5487,"Joey":0.5753,"Ray":3.4211,"Bobby":-5.1813,"Matt":2.6544,"Eric":0.9317,"Kat":1.3729,"Ciaran":-2.7341,"Luke":-0.3623,"Mike":-2.8926,"Brendan":0}},{"label":"Thu 2:29 PM ET","pos":{"Christian":1.1137,"Dan":8.5487,"Joey":0.3857,"Ray":2.5979,"Bobby":-5.8938,"Matt":2.5706,"Eric":-0.3682,"Kat":1.2204,"Ciaran":-2.8692,"Luke":1.4493,"Mike":-3.0165,"Brendan":0}},{"label":"Thu 2:59 PM ET","pos":{"Christian":1.2993,"Dan":8.5487,"Joey":0.6668,"Ray":2.3966,"Bobby":-5.9154,"Matt":2.3191,"Eric":-0.4184,"Kat":1.2204,"Ciaran":-3.1632,"Luke":1.4493,"Mike":-3.4711,"Brendan":0}},{"label":"Thu 3:29 PM ET","pos":{"Christian":1.4849,"Dan":8.1511,"Joey":1.18,"Ray":2.3235,"Bobby":-4.8899,"Matt":2.5706,"Eric":1.3389,"Kat":1.0678,"Ciaran":-3.052,"Luke":1.4493,"Mike":-2.8926,"Brendan":0.365}},{"label":"Thu 3:59 PM ET","pos":{"Christian":1.1601,"Dan":9.7416,"Joey":1.2846,"Ray":2.3235,"Bobby":-5.7319,"Matt":2.4588,"Eric":-1.1939,"Kat":1.0678,"Ciaran":-2.7976,"Luke":1.4493,"Mike":-3.1405,"Brendan":0.7299}},{"label":"Thu 4:00 PM ET \u00b7 close","pos":{"Christian":1.5313,"Dan":10.1392,"Joey":0.9578,"Ray":2.6345,"Bobby":-6.5199,"Matt":2.5426,"Eric":-0.675,"Kat":1.47,"Ciaran":-2.8294,"Luke":1.4493,"Mike":-1.9835,"Brendan":1.4599}},{"label":"Fri 9:59 AM ET","pos":{"Christian":1.0209,"Dan":8.1511,"Joey":0.255,"Ray":1.4453,"Bobby":-6.5307,"Matt":0.1956,"Eric":-18.7727,"Kat":0.0277,"Ciaran":-2.281,"Luke":6.8841,"Mike":-1.4876,"Brendan":0}},{"label":"Fri 10:29 AM ET","pos":{"Christian":0.8353,"Dan":7.3559,"Joey":-0.5361,"Ray":-1.0611,"Bobby":-9.035,"Matt":-1.1456,"Eric":-23.1855,"Kat":-0.735,"Ciaran":-4.6018,"Luke":3.2609,"Mike":-2.3554,"Brendan":0}},{"label":"Fri 10:59 AM ET","pos":{"Christian":1.0209,"Dan":8.9463,"Joey":1.1899,"Ray":0.8599,"Bobby":-7.6209,"Matt":-0.7544,"Eric":-22.304,"Kat":-1.1233,"Ciaran":-4.2759,"Luke":5.0725,"Mike":-3.1818,"Brendan":0.365}},{"label":"Fri 11:29 AM ET","pos":{"Christian":0.6497,"Dan":7.7535,"Joey":0.3661,"Ray":0.0366,"Bobby":-8.2254,"Matt":-1.1456,"Eric":-23.219,"Kat":-0.6102,"Ciaran":-4.4667,"Luke":5.0725,"Mike":-3.3884,"Brendan":0}},{"label":"Fri 11:59 AM ET","pos":{"Christian":0.9281,"Dan":7.3559,"Joey":0.5165,"Ray":-0.5397,"Bobby":-7.6641,"Matt":-0.8382,"Eric":-23.3194,"Kat":-0.7905,"Ciaran":-3.0599,"Luke":5.0725,"Mike":-3.2645,"Brendan":0.7299}},{"label":"Fri 12:29 PM ET","pos":{"Christian":0.9281,"Dan":7.3559,"Joey":0.8793,"Ray":-0.4665,"Bobby":-7.3726,"Matt":-0.5588,"Eric":-23.0907,"Kat":-0.624,"Ciaran":-2.7182,"Luke":5.0725,"Mike":-3.0165,"Brendan":1.4599}},{"label":"Fri 12:59 PM ET","pos":{"Christian":0.9745,"Dan":8.5487,"Joey":1.0395,"Ray":-0.4574,"Bobby":-7.1136,"Matt":-0.6147,"Eric":-22.7559,"Kat":-0.8459,"Ciaran":-2.6228,"Luke":5.0725,"Mike":-2.7686,"Brendan":1.4599}},{"label":"Fri 1:29 PM ET","pos":{"Christian":1.2065,"Dan":9.3439,"Joey":1.5331,"Ray":-0.3933,"Bobby":-6.0989,"Matt":-0.4471,"Eric":-21.8968,"Kat":-0.7489,"Ciaran":-2.4082,"Luke":8.6957,"Mike":-2.8512,"Brendan":1.0949}},{"label":"Fri 1:59 PM ET","pos":{"Christian":0.9281,"Dan":9.3439,"Joey":1.5037,"Ray":-0.375,"Bobby":-5.9801,"Matt":-0.1676,"Eric":-22.371,"Kat":-0.7627,"Ciaran":-2.7341,"Luke":6.8841,"Mike":-3.1818,"Brendan":1.4599}},{"label":"Fri 2:29 PM ET","pos":{"Christian":1.1601,"Dan":10.1392,"Joey":1.9548,"Ray":-1.0703,"Bobby":-5.5484,"Matt":-0.2235,"Eric":-21.0656,"Kat":-0.4992,"Ciaran":-2.8374,"Luke":5.0725,"Mike":-3.1405,"Brendan":1.8248}},{"label":"Fri 2:59 PM ET","pos":{"Christian":0.9281,"Dan":10.5368,"Joey":1.7456,"Ray":-1.18,"Bobby":-5.041,"Matt":-0.2515,"Eric":-19.9331,"Kat":-0.5131,"Ciaran":-2.5354,"Luke":5.0725,"Mike":-2.7273,"Brendan":1.8248}},{"label":"Fri 3:29 PM ET","pos":{"Christian":0.8353,"Dan":9.3439,"Joey":1.3762,"Ray":-1.1526,"Bobby":-4.7388,"Matt":-0.3353,"Eric":-21.1437,"Kat":-0.4854,"Ciaran":-2.4956,"Luke":5.0725,"Mike":-2.8099,"Brendan":2.1898}},{"label":"Fri 3:59 PM ET","pos":{"Christian":0.7889,"Dan":11.7296,"Joey":1.9384,"Ray":-0.9147,"Bobby":-5.1274,"Matt":-0.3353,"Eric":-21.378,"Kat":-0.6379,"Ciaran":-2.2651,"Luke":1.4493,"Mike":-2.9339,"Brendan":1.4599}},{"label":"Fri 4:00 PM ET \u00b7 FINAL","pos":{"Christian":0.7889,"Dan":12.1272,"Joey":1.7292,"Ray":-0.869,"Bobby":-6.563,"Matt":-0.4191,"Eric":-21.523,"Kat":-0.5547,"Ciaran":-2.1936,"Luke":3.2609,"Mike":-2.9752,"Brendan":1.8248}}];
+
+const ROSTER = [
+  {name:"Christian", ticker:"GME",     color:"#ffb000"},
+  {name:"Dan",       ticker:"AMC",     color:"#21c17a"},
+  {name:"Joey",      ticker:"TSLA",    color:"#4aa3ff"},
+  {name:"Ray",       ticker:"SPCX",    color:"#ff4d5e"},
+  {name:"Bobby",     ticker:"HOOD",    color:"#b56cff"},
+  {name:"Matt",      ticker:"Bitcoin", color:"#f7931a"},
+  {name:"Eric",      ticker:"RDDT",    color:"#ff7ac2"},
+  {name:"Kat",       ticker:"NFLX",    color:"#35e0d0"},
+  {name:"Ciaran",    ticker:"PLTR",    color:"#9acd32"},
+  {name:"Luke",      ticker:"BYND",    color:"#ffd23f"},
+  {name:"Mike",      ticker:"DKNG",    color:"#ff8c42"},
+  {name:"Brendan",   ticker:"WOOF",    color:"#8fa3ad"},
+];
+const tk = t => t==='Bitcoin' ? 'BTC' : t;
+const N = ROSTER.length;
+
+document.getElementById('windowLabel').textContent = WINDOW_LABEL;
+(function(){ let h=''; for(let r=0;r<3;r++) ROSTER.forEach(x=>h+=`<span><b>${tk(x.ticker)}</b> \u25aa</span>`); document.getElementById('tape').innerHTML=h; })();
+
+let frames=[], i=0, playing=false, speed=1, timer=null, minV=0, maxV=1;
+
+function dayName(label){ return ({Tue:'TUESDAY',Wed:'WEDNESDAY',Thu:'THURSDAY',Fri:'FRIDAY'})[(label||'').slice(0,3)] || ''; }
+function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
+function yPct(v){ return 6 + (v-minV)/((maxV-minV)||1) * 86; }
+
+function buildSky(){
+  const sky=document.getElementById('sky'), yaxis=document.getElementById('yaxis');
+  sky.innerHTML=''; yaxis.innerHTML='';
+  const cv=document.createElement('canvas'); cv.id='trails'; sky.appendChild(cv);
+  const dm=document.createElement('div'); dm.className='daymark'; dm.id='daymark'; sky.appendChild(dm);
+  const lo=Math.ceil(minV), hi=Math.floor(maxV);
+  const stepT=(hi-lo)>18?5:(hi-lo)>10?4:2;
+  const ticks=new Set([0]);
+  for(let t=Math.ceil(lo/stepT)*stepT;t<=hi;t+=stepT) ticks.add(t);
+  [...ticks].sort((a,b)=>a-b).forEach(t=>{
+    if(t<minV||t>maxV) return;
+    const gl=document.createElement('div'); gl.className='gridline'+(t===0?' zero':''); gl.style.bottom=yPct(t)+'%'; sky.appendChild(gl);
+    const yl=document.createElement('div'); yl.className='ytick'; yl.style.bottom=yPct(t)+'%'; yl.textContent=(t>0?'+':'')+t+'%'; yaxis.appendChild(yl);
+  });
+  const sm=document.createElement('div'); sm.className='summit'; sm.style.bottom=yPct(maxV)+'%'; sky.appendChild(sm);
+  ROSTER.forEach((r,idx)=>{
+    const b=document.createElement('div'); b.className='balloon'; b.id='b-'+r.name;
+    b.style.left=(((idx+0.5)/N)*100)+'%'; b.style.bottom='6%';
+    b.innerHTML=`<span class="crown">\u{1F451}</span><div class="bulb" style="background:${r.color}"><span class="rk" id="rk-${r.name}"></span></div><div class="string"></div><div class="basket"></div>`;
+    sky.appendChild(b);
+  });
+  cv.width=sky.clientWidth; cv.height=sky.clientHeight;
+  const xl=document.getElementById('xlabels');
+  xl.style.gridTemplateColumns=`repeat(${N},1fr)`;
+  xl.innerHTML=ROSTER.map(r=>`<div class="xl"><b>${r.name}</b>${tk(r.ticker)}</div>`).join('');
+}
+
+function drawTrails(idx){
+  const cv=document.getElementById('trails'); if(!cv) return;
+  const ctx=cv.getContext('2d'); const W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H);
+  const K=6; ctx.lineWidth=2.2; ctx.lineCap='round';
+  ROSTER.forEach((r,ci)=>{
+    const xBase=((ci+0.5)/N)*W;
+    for(let a=0;a<K;a++){
+      const f0=idx-a, f1=idx-a-1; if(f1<0) break;
+      const v0=frames[f0].pos[r.name], v1=frames[f1].pos[r.name];
+      if(v0===undefined||v1===undefined) continue;
+      const y0=H*(1-yPct(v0)/100), y1=H*(1-yPct(v1)/100);
+      const x0=xBase-a*2.4, x1=xBase-(a+1)*2.4;
+      ctx.strokeStyle=hexA(r.color, 0.55*(1-a/K));
+      ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+    }
+  });
+}
+
+function renderFrame(idx){
+  const fr=frames[idx]; if(!fr) return;
+  const ranked=ROSTER.map(r=>({name:r.name,ticker:r.ticker,color:r.color,v:fr.pos[r.name]})).filter(r=>r.v!==undefined).sort((a,b)=>b.v-a.v);
+  const rankOf={}; ranked.forEach((r,p)=>rankOf[r.name]=p+1);
+  ROSTER.forEach(r=>{ const v=fr.pos[r.name]; if(v===undefined) return; const el=document.getElementById('b-'+r.name);
+    el.style.bottom=yPct(v)+'%'; document.getElementById('rk-'+r.name).textContent=rankOf[r.name]; el.classList.remove('flash','lead','win'); });
+  document.getElementById('clock').textContent=fr.label;
+  if(ranked.length){ const L=ranked[0]; document.getElementById('leader').innerHTML=`highest: <b>${L.name}</b> ${tk(L.ticker)} ${L.v>0?'+':''}${L.v.toFixed(2)}%`;
+    document.getElementById('b-'+L.name).classList.add('lead'); }
+  if(idx>0){ let mv=null,md=0; ROSTER.forEach(r=>{const a=fr.pos[r.name],b=frames[idx-1].pos[r.name]; if(a===undefined||b===undefined)return; const d=Math.abs(a-b); if(d>md){md=d;mv=r.name;}});
+    if(mv&&md>0.5){ const el=document.getElementById('b-'+mv); void el.offsetWidth; el.classList.add('flash'); } }
+  drawTrails(idx);
+  const prevRank={}; if(idx>0) ROSTER.map(r=>({name:r.name,v:frames[idx-1].pos[r.name]})).filter(r=>r.v!==undefined).sort((a,b)=>b.v-a.v).forEach((r,p)=>prevRank[r.name]=p+1);
+  document.getElementById('board').innerHTML='<div class="bhead">live order</div>'+ranked.map((r,p)=>{
+    const pick=p+1; let ar=''; if(idx>0){ const d=(prevRank[r.name]||pick)-pick; ar=d>0?`<span class="up">▲${d}</span>`:(d<0?`<span class="down">▼${-d}</span>`:''); }
+    const cls=r.v>0?'up':(r.v<0?'down':'');
+    return `<div class="brow"><span class="bp">${pick}</span><span class="sw" style="background:${r.color}"></span><span class="bn">${r.name}<small>${tk(r.ticker)}</small></span><span class="bv ${cls}">${r.v>0?'+':''}${r.v.toFixed(2)}%</span><span>${ar}</span></div>`;
+  }).join('');
+  const day=dayName(fr.label);
+  if(idx===0 || day!==dayName(frames[idx-1].label)){ const dm=document.getElementById('daymark'); if(dm){ dm.textContent=day; dm.classList.remove('show'); void dm.offsetWidth; dm.classList.add('show'); } }
+  document.getElementById('prog').style.width=(frames.length>1?idx/(frames.length-1)*100:0)+'%';
+  document.getElementById('scrub').value=idx;
+  const win=document.getElementById('winbar');
+  if(idx===frames.length-1 && ranked.length){ const W=ranked[0]; document.getElementById('b-'+W.name).classList.add('win');
+    win.className='winbar show'; win.innerHTML=`\u{1F451} ${W.name} takes pick 1 \u2014 ${tk(W.ticker)} ${W.v>0?'+':''}${W.v.toFixed(2)}%`; }
+  else win.className='winbar';
+}
+
+function step(){ if(i>=frames.length-1){stop();return;} i++; renderFrame(i); timer=setTimeout(step,1000/speed); }
+function play(){ if(playing)return; if(i>=frames.length-1)i=0; playing=true; document.body.classList.add('running');
+  document.getElementById('playBtn').textContent='⏸ Pause';
+  const dur=(1.0/speed)+'s'; document.querySelectorAll('.balloon').forEach(b=>b.style.transitionDuration=dur);
+  timer=setTimeout(step,1000/speed); }
+function stop(){ playing=false; document.body.classList.remove('running'); document.getElementById('playBtn').textContent='▶ Play'; clearTimeout(timer); }
+function setSpeed(s){ speed=s; ['spd1','spd2','spd4'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  document.getElementById('spd'+s).classList.add('on'); const dur=(1.0/speed)+'s'; document.querySelectorAll('.balloon').forEach(b=>b.style.transitionDuration=dur); }
+
+document.getElementById('playBtn').onclick=()=>playing?stop():play();
+document.getElementById('replayBtn').onclick=()=>{ stop(); i=0; renderFrame(0); play(); };
+document.getElementById('spd1').onclick=()=>setSpeed(1);
+document.getElementById('spd2').onclick=()=>setSpeed(2);
+document.getElementById('spd4').onclick=()=>setSpeed(4);
+document.getElementById('scrub').oninput=(e)=>{ stop(); i=+e.target.value; renderFrame(i); };
+window.addEventListener('resize',()=>{ const sky=document.getElementById('sky'),cv=document.getElementById('trails'); if(cv){cv.width=sky.clientWidth;cv.height=sky.clientHeight;} renderFrame(i); });
+
+function load(){
+  frames=RACE;
+  let lo=Infinity,hi=-Infinity;
+  frames.forEach(f=>Object.values(f.pos).forEach(v=>{ if(v<lo)lo=v; if(v>hi)hi=v; }));
+  minV=lo-0.5; maxV=hi;
+  buildSky(); setSpeed(1);
+  document.getElementById('scrub').max=frames.length-1;
+  i=0; renderFrame(0);
+}
+load();
+</script>
+</body>
+</html>

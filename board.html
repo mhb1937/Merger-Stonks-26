@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Big Board — Live (Two Conferences)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#0b0e11;--panel:#12171c;--panel-2:#0e1216;--amber:#ffb000;--amber-dim:#8a6a1f;
+    --up:#21c17a;--down:#ff4d5e;--bright:#e8edf1;--dim:#6b7680;--grid:rgba(255,255,255,0.06);--glow:0 0 12px rgba(255,176,0,0.35);
+    --white:#5aa9ff;--black:#c07cff;}
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--bright);font-family:"IBM Plex Mono",monospace;min-height:100vh;-webkit-font-smoothing:antialiased;
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:44px 44px;}
+  .tape{border-bottom:1px solid var(--grid);background:var(--panel-2);overflow:hidden;white-space:nowrap;height:34px;display:flex;align-items:center;}
+  .tape-track{display:inline-block;padding-left:100%;animation:scroll 30s linear infinite;}
+  .tape-track span{font-size:12px;letter-spacing:.08em;color:var(--dim);margin:0 20px;}
+  .tape-track span b{color:var(--amber);font-weight:600;}
+  @keyframes scroll{from{transform:translateX(0);}to{transform:translateX(-100%);}}
+  .wrap{max-width:1000px;margin:0 auto;padding:28px 20px 60px;}
+  header.masthead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid var(--amber);padding-bottom:14px;}
+  .brand h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(28px,6vw,46px);line-height:.92;margin:0;color:var(--amber);text-shadow:var(--glow);}
+  .brand p{margin:7px 0 0;font-size:12px;color:var(--dim);letter-spacing:.04em;}
+  .status{text-align:right;font-size:11px;color:var(--dim);line-height:1.7;white-space:nowrap;}
+  .status .live{color:var(--up);}
+  .status .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--up);margin-right:5px;box-shadow:0 0 8px var(--up);animation:blink 1.6s ease-in-out infinite;}
+  .status.sample .live{color:var(--down);} .status.sample .dot{background:var(--down);box-shadow:0 0 8px var(--down);}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+  .banner{margin:14px 0 0;padding:9px 13px;border:1px solid var(--down);border-radius:3px;background:rgba(255,77,94,.08);color:var(--down);font-size:12px;line-height:1.5;display:none;}
+  .banner.show{display:block;}
+
+  .conftabs{display:flex;gap:0;border-bottom:1px solid var(--grid);margin:18px 0 0;}
+  .ctab{background:none;border:none;color:var(--dim);font-family:"Space Grotesk";font-weight:700;font-size:15px;letter-spacing:.04em;
+    padding:11px 20px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:8px;transition:color .15s;}
+  .ctab:hover{color:var(--bright);}
+  .ctab.active[data-conf="White Hat"]{color:var(--white);border-bottom-color:var(--white);}
+  .ctab.active[data-conf="Black Hat"]{color:var(--black);border-bottom-color:var(--black);}
+
+  .leadline{margin:16px 0 6px;font-size:13px;color:var(--dim);}
+  .leadline b{font-family:"Space Grotesk",sans-serif;color:var(--amber);font-size:15px;}
+  .chart-card{margin:12px 0 26px;border:1px solid var(--grid);border-radius:6px;background:var(--panel-2);padding:16px 14px 10px;}
+  .chart-wrap{position:relative;height:340px;}
+  .standings{border:1px solid var(--grid);border-radius:6px;overflow:hidden;background:var(--panel-2);}
+  .st-head,.st-row{display:grid;grid-template-columns:70px 1fr 1fr 120px;align-items:center;}
+  .st-head{background:var(--panel);border-bottom:1px solid var(--grid);font-size:10.5px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;padding:10px 16px;}
+  .st-row{padding:13px 16px;border-bottom:1px solid var(--grid);}
+  .st-row:last-child{border-bottom:none;}
+  .st-row .pick{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:13px;color:var(--amber);letter-spacing:.04em;}
+  .st-row .who{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:16px;}
+  .st-row .tick{font-size:13px;color:var(--dim);}
+  .st-row .tick .swatch{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px;vertical-align:0;}
+  .st-row .pct{text-align:right;font-size:15px;font-weight:600;}
+  .pct.up{color:var(--up);} .pct.down{color:var(--down);} .pct.flat{color:var(--dim);}
+  .controls{display:flex;gap:10px;margin:16px 0 4px;flex-wrap:wrap;}
+  .btn{font-family:inherit;font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:transparent;color:var(--dim);border:1px solid var(--grid);padding:8px 13px;border-radius:3px;cursor:pointer;transition:.15s;}
+  .btn:hover{color:var(--bright);border-color:var(--amber);}
+  footer{margin-top:26px;text-align:center;font-size:11px;color:var(--dim);line-height:1.8;}
+  footer b{color:var(--amber-dim);}
+  @media (max-width:620px){.st-head,.st-row{grid-template-columns:52px 1fr 84px;}.st-head .h-tick,.st-row .tick{display:none;}.status{display:none;}.chart-wrap{height:280px;}}
+  @media (prefers-reduced-motion:reduce){.tape-track{animation:none;padding-left:0;}.status .dot{animation:none;}}
+</style>
+</head>
+<body>
+<div class="tape" aria-hidden="true"><div class="tape-track" id="tape"></div></div>
+<div class="wrap">
+  <header class="masthead">
+    <div class="brand"><h1>THE BIG BOARD</h1><p id="windowLabel">live draft tracker · two conferences</p></div>
+    <div class="status" id="status"><div><span class="dot"></span><span class="live" id="statusText">CONNECTING</span></div><div id="updated">—</div></div>
+  </header>
+  <div class="banner" id="banner"></div>
+
+  <div class="conftabs" id="conftabs">
+    <button class="ctab active" data-conf="White Hat">🎩 White Hat</button>
+    <button class="ctab" data-conf="Black Hat">🕶️ Black Hat</button>
+  </div>
+
+  <div class="leadline" id="leadline"></div>
+  <div class="chart-card"><div class="chart-wrap"><canvas id="chart"></canvas></div></div>
+  <div class="controls">
+    <button class="btn" id="toggleAll">Show all</button>
+    <button class="btn" id="toggleTop">Top 5 only</button>
+    <button class="btn" id="refreshBtn">Refresh now</button>
+  </div>
+  <div class="standings" id="standings">
+    <div class="st-head"><div>Pick</div><div>Manager</div><div class="h-tick">Ticker</div><div style="text-align:right">% Change</div></div>
+  </div>
+  <footer>Prices via GOOGLEFINANCE (~20 min delayed) — live leaderboard only. Each conference ranked separately.<br>
+    <b>Official draft order is the frozen Friday 4:00 PM ET close.</b></footer>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const CSV_URL      = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTAHnk6pwypbIA1Yooc-9QW_OI3smS3z81aZlVP3iarwSMU1hFh1ZY0w4iXJd0ixyKTdLdNHyb8hxR4/pub?gid=469262201&single=true&output=csv";
+const WINDOW_LABEL = "prices ~20 min delayed · ranked within each conference";
+const REFRESH_MS   = 300000;
+const DRAFT_DESC   = true;
+/* ========================================= */
+
+// manager -> conference, ticker (display), line color. Names MUST match the Log CSV headers.
+const ROSTER = [
+  {name:"Michael", conf:"White Hat", ticker:"CRWD",    color:"#35e0d0"},
+  {name:"Eric",    conf:"White Hat", ticker:"HOOD",    color:"#b56cff"},
+  {name:"Jacob",   conf:"White Hat", ticker:"Brent",   color:"#8fa3ad"},
+  {name:"Ray",     conf:"White Hat", ticker:"AMC",     color:"#21c17a"},
+  {name:"Ryan",    conf:"White Hat", ticker:"DKNG",    color:"#ff8c42"},
+  {name:"Steven",  conf:"White Hat", ticker:"GME",     color:"#ffb000"},
+  {name:"Nicole",  conf:"White Hat", ticker:"SPCX",    color:"#ff4d5e"},
+  {name:"Kel",     conf:"White Hat", ticker:"TSLA",    color:"#4aa3ff"},
+  {name:"Wes",     conf:"White Hat", ticker:"BYND",    color:"#ffd23f"},
+  {name:"Rushmi",  conf:"White Hat", ticker:"Bitcoin", color:"#f7931a"},
+  {name:"Rob",     conf:"White Hat", ticker:"PLTR",    color:"#9acd32"},
+  {name:"Erik",    conf:"White Hat", ticker:"RDDT",    color:"#ff7ac2"},
+  {name:"Leah",    conf:"Black Hat", ticker:"TSLA",    color:"#4aa3ff"},
+  {name:"Jason",   conf:"Black Hat", ticker:"DKNG",    color:"#ff8c42"},
+  {name:"Aiden",   conf:"Black Hat", ticker:"Bitcoin", color:"#f7931a"},
+  {name:"Darrell", conf:"Black Hat", ticker:"CRWD",    color:"#35e0d0"},
+  {name:"Jonathan",conf:"Black Hat", ticker:"AMC",     color:"#21c17a"},
+  {name:"Doug",    conf:"Black Hat", ticker:"HOOD",    color:"#b56cff"},
+  {name:"Morgan",  conf:"Black Hat", ticker:"PLTR",    color:"#9acd32"},
+  {name:"Lindsey", conf:"Black Hat", ticker:"RDDT",    color:"#ff7ac2"},
+  {name:"Susan",   conf:"Black Hat", ticker:"GME",     color:"#ffb000"},
+  {name:"Liz",     conf:"Black Hat", ticker:"BYND",    color:"#ffd23f"},
+  {name:"Fletus",  conf:"Black Hat", ticker:"Brent",   color:"#8fa3ad"},
+  {name:"Evan",    conf:"Black Hat", ticker:"SPCX",    color:"#ff4d5e"},
+];
+const tk = t => t==='Bitcoin'?'BTC':(t==='Brent'?'BNO':t);
+let activeConf='White Hat';
+function roster(){ return ROSTER.filter(r=>r.conf===activeConf); }
+
+document.getElementById('windowLabel').textContent=WINDOW_LABEL;
+(function(){ let h=''; for(let r=0;r<2;r++) ROSTER.forEach(x=>h+=`<span><b>${tk(x.ticker)}</b> ▪</span>`); document.getElementById('tape').innerHTML=h; })();
+
+let chart=null, lastRows=[], isSample=false;
+
+function parseCSV(text){
+  const lines=text.replace(/^\uFEFF/,'').trim().split(/\r?\n/);
+  const header=lines[0].split(',').map(s=>s.trim());
+  return lines.slice(1).filter(l=>l.length).map(line=>{const c=line.split(',');const o={};header.forEach((h,i)=>o[h]=(c[i]||'').trim());return o;});
+}
+function fmtTime(ts){
+  const m=ts&&ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if(m){const d=new Date(+m[3],+m[1]-1,+m[2],+m[4],+m[5]);const wd=d.toLocaleDateString('en-US',{weekday:'short'});let h=+m[4];const ap=h>=12?'PM':'AM';h=h%12||12;return `${wd} ${h}:${m[5]} ${ap}`;}
+  const d=new Date(ts);return isNaN(d)?ts:d.toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit',timeZone:'America/New_York'});
+}
+function collapseFlat(rows){
+  if(rows.length<=2) return rows;
+  const names=ROSTER.map(r=>r.name); const out=[rows[0]];
+  for(let k=1;k<rows.length;k++){const prev=out[out.length-1];let ch=false;for(const n of names){const v=rows[k][n];if(v!==''&&v!==undefined&&v!==prev[n]){ch=true;break;}}if(ch||k===rows.length-1)out.push(rows[k]);}
+  return out;
+}
+function sampleData(){
+  const rows=[];const start=new Date();start.setHours(9,30,0,0);const walk={};ROSTER.forEach(r=>walk[r.name]=0);
+  for(let i=0;i<16;i++){const t=new Date(start.getTime()+i*30*60000);const row={Timestamp:t.toISOString()};ROSTER.forEach(r=>{walk[r.name]+=(Math.random()-0.48)*1.4;row[r.name]=walk[r.name].toFixed(4);});rows.push(row);}
+  return rows;
+}
+function labelsFrom(rows){const key=Object.keys(rows[0])[0];return rows.map(r=>fmtTime(r[key]));}
+function datasetsFrom(rows,onlyTop){
+  let list=roster();
+  if(onlyTop){const last=rows[rows.length-1];list=[...list].sort((a,b)=>parseFloat(last[b.name])-parseFloat(last[a.name])).slice(0,5);}
+  return list.map(r=>({label:`${r.name} (${tk(r.ticker)})`,data:rows.map(row=>parseFloat(row[r.name])),borderColor:r.color,backgroundColor:r.color,borderWidth:2,pointRadius:rows.length<=2?4:0,pointHoverRadius:5,tension:.25,spanGaps:true}));
+}
+function renderChart(rows,onlyTop){
+  const ctx=document.getElementById('chart');
+  const cfg={type:'line',data:{labels:labelsFrom(rows),datasets:datasetsFrom(rows,onlyTop)},options:{
+    responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},
+    plugins:{legend:{labels:{color:'#8a94a0',font:{family:'IBM Plex Mono',size:10},boxWidth:10,boxHeight:10,padding:8}},
+      tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y>0?'+':''}${c.parsed.y.toFixed(2)}%`}}},
+    scales:{x:{ticks:{color:'#6b7680',font:{family:'IBM Plex Mono',size:9},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.05)'},title:{display:true,text:'time (ET)',color:'#6b7680',font:{family:'IBM Plex Mono',size:10}}},
+      y:{ticks:{color:'#6b7680',font:{family:'IBM Plex Mono',size:10},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.05)'},title:{display:true,text:'% change from open',color:'#6b7680',font:{family:'IBM Plex Mono',size:10}}}}}};
+  if(chart){chart.data=cfg.data;chart.update();}else{chart=new Chart(ctx,cfg);}
+}
+function renderStandings(rows){
+  const last=rows[rows.length-1];
+  const ranked=roster().map(r=>({...r,pct:parseFloat(last[r.name])})).filter(r=>!isNaN(r.pct)).sort((a,b)=>DRAFT_DESC?b.pct-a.pct:a.pct-b.pct);
+  const box=document.getElementById('standings');
+  box.querySelectorAll('.st-row').forEach(e=>e.remove());
+  ranked.forEach((r,i)=>{const cls=r.pct>0?'up':(r.pct<0?'down':'flat');const sign=r.pct>0?'+':'';
+    const el=document.createElement('div');el.className='st-row';
+    el.innerHTML=`<div class="pick">PICK ${i+1}</div><div class="who">${r.name}</div><div class="tick"><span class="swatch" style="background:${r.color}"></span>${tk(r.ticker)}</div><div class="pct ${cls}">${sign}${r.pct.toFixed(2)}%</div>`;
+    box.appendChild(el);});
+  if(ranked.length){const L=ranked[0];document.getElementById('leadline').innerHTML=`${activeConf} — on the clock at pick 1: <b>${L.name}</b> ${tk(L.ticker)} ${L.pct>0?'+':''}${L.pct.toFixed(2)}%`;}
+}
+function rerender(){ if(!lastRows.length)return; renderChart(lastRows,false); renderStandings(lastRows); }
+
+async function load(){
+  let rows;
+  try{
+    if(!CSV_URL||CSV_URL.startsWith("PASTE_"))throw 0;
+    const res=await fetch(CSV_URL,{cache:"no-store"});if(!res.ok)throw 0;
+    const parsed=parseCSV(await res.text());if(!parsed.length)throw 0;rows=parsed;isSample=false;
+  }catch(e){rows=sampleData();isSample=true;}
+  lastRows=collapseFlat(rows);
+  const banner=document.getElementById('banner'),status=document.getElementById('status');
+  if(isSample){banner.className='banner show';banner.innerHTML="Showing <b>sample data</b> — couldn't reach the feed. Host this file / check CSV_URL.";
+    status.className='status sample';document.getElementById('statusText').textContent='SAMPLE DATA';document.getElementById('updated').textContent='not connected';}
+  else{banner.className='banner';status.className='status';document.getElementById('statusText').textContent='LIVE';
+    const key=Object.keys(lastRows[0])[0];document.getElementById('updated').textContent='updated '+fmtTime(lastRows[lastRows.length-1][key])+' ET';}
+  rerender();
+}
+
+document.querySelectorAll('.ctab').forEach(t=>{t.onclick=()=>{document.querySelectorAll('.ctab').forEach(x=>x.classList.remove('active'));t.classList.add('active');activeConf=t.dataset.conf;rerender();};});
+document.getElementById('toggleAll').onclick=()=>renderChart(lastRows,false);
+document.getElementById('toggleTop').onclick=()=>renderChart(lastRows,true);
+document.getElementById('refreshBtn').onclick=load;
+load(); setInterval(load,REFRESH_MS);
+</script>
+</body>
+</html>
